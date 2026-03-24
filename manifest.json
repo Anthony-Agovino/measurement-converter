@@ -1,0 +1,10 @@
+{
+  "manifest_version": 3,
+  "name": "MyMeasurementConverter",
+  "version": "1.0",
+  "description": "Quick & precise measurements converter.",
+  "action": {
+    "default_popup": "index.html",
+    "default_title": "MyMeasurementConverter"
+  }
+}
