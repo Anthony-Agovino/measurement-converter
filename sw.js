@@ -1,15 +1,16 @@
-const CACHE_NAME = 'measurement-converter-v6';
+const CACHE_NAME = 'measurement-converter-v8';
 const ASSETS = [
     './',
     './index.html',
     './style.css',
     './script.js',
     './manifest.webmanifest',
-    './icon.svg'
+    './app-icon.svg'
 ];
 
 // Install Event
 self.addEventListener('install', (e) => {
+    self.skipWaiting(); // Force the waiting service worker to become the active service worker
     e.waitUntil(
         caches.open(CACHE_NAME).then((cache) => {
             return cache.addAll(ASSETS);
@@ -28,7 +29,7 @@ self.addEventListener('activate', (e) => {
                     }
                 })
             );
-        })
+        }).then(() => self.clients.claim()) // Take control of all clients immediately
     );
 });
 
