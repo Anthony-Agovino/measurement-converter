@@ -51,6 +51,23 @@ const units = {
         },
         defaultFrom: 'c',
         defaultTo: 'f'
+    },
+    area: {
+        base: 'sq_m',
+        options: {
+            'sq_mm': { name: 'Square Millimeters', toBase: 0.000001 },
+            'sq_cm': { name: 'Square Centimeters', toBase: 0.0001 },
+            'sq_m': { name: 'Square Meters', toBase: 1 },
+            'sq_km': { name: 'Square Kilometers', toBase: 1000000 },
+            'sq_in': { name: 'Square Inches', toBase: 0.00064516 },
+            'sq_ft': { name: 'Square Feet', toBase: 0.092903 },
+            'sq_yd': { name: 'Square Yards', toBase: 0.836127 },
+            'sq_mi': { name: 'Square Miles', toBase: 2589988 },
+            'acre': { name: 'Acres', toBase: 4046.86 },
+            'hectare': { name: 'Hectares', toBase: 10000 }
+        },
+        defaultFrom: 'sq_m',
+        defaultTo: 'sq_ft'
     }
 };
 
