@@ -1,4 +1,4 @@
-const CACHE_NAME = 'measurement-converter-v8';
+const CACHE_NAME = 'measurement-converter-v9';
 const ASSETS = [
     './',
     './index.html',
