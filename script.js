@@ -95,6 +95,21 @@ function init() {
     setupInputListeners();
     setupUIListeners();
     loadHistory();
+
+    // Resume previous category if available
+    const savedCategory = localStorage.getItem('mc_last_category');
+    if (savedCategory && units[savedCategory]) {
+        currentCategory = savedCategory;
+        // Update active button
+        categoryBtns.forEach(b => {
+            if (b.dataset.category === currentCategory) {
+                b.classList.add('active');
+            } else {
+                b.classList.remove('active');
+            }
+        });
+    }
+
     populateSelects(currentCategory);
 }
 
@@ -109,6 +124,7 @@ function setupCategoryListeners() {
             
             // Update category
             currentCategory = e.target.dataset.category;
+            localStorage.setItem('mc_last_category', currentCategory);
             populateSelects(currentCategory);
         });
     });
@@ -133,9 +149,21 @@ function populateSelects(category) {
         toSelect.appendChild(option2);
     }
 
-    // Set defaults
-    fromSelect.value = catData.defaultFrom;
-    toSelect.value = catData.defaultTo;
+    // Set defaults or load from storage
+    const savedFrom = localStorage.getItem(`mc_last_from_${category}`);
+    const savedTo = localStorage.getItem(`mc_last_to_${category}`);
+
+    if (savedFrom && catData.options[savedFrom]) {
+        fromSelect.value = savedFrom;
+    } else {
+        fromSelect.value = catData.defaultFrom;
+    }
+
+    if (savedTo && catData.options[savedTo]) {
+        toSelect.value = savedTo;
+    } else {
+        toSelect.value = catData.defaultTo;
+    }
 
     // Trigger conversion
     convert();
@@ -144,14 +172,23 @@ function populateSelects(category) {
 // Set up input and select listeners
 function setupInputListeners() {
     fromInput.addEventListener('input', convert);
-    fromSelect.addEventListener('change', convert);
-    toSelect.addEventListener('change', convert);
+    fromSelect.addEventListener('change', () => {
+        localStorage.setItem(`mc_last_from_${currentCategory}`, fromSelect.value);
+        convert();
+    });
+    toSelect.addEventListener('change', () => {
+        localStorage.setItem(`mc_last_to_${currentCategory}`, toSelect.value);
+        convert();
+    });
 
     swapBtn.addEventListener('click', () => {
         // Swap selected units
         const tempUnit = fromSelect.value;
         fromSelect.value = toSelect.value;
         toSelect.value = tempUnit;
+        
+        localStorage.setItem(`mc_last_from_${currentCategory}`, fromSelect.value);
+        localStorage.setItem(`mc_last_to_${currentCategory}`, toSelect.value);
         
         // Add a subtle animation to the button
         swapBtn.style.transform = 'rotate(180deg) scale(0.92)';
