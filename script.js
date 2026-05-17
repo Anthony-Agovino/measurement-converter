@@ -1,6 +1,11 @@
+/* =============================================================
+   MyMeasurementConverter (UnitDash) - script.js
+   Updates: Implemented duplicate unit prevention in dropdowns.
+   ============================================================= */
+
 const units = {
     weight: {
-        base: 'g', // Keep base unit internally to convert easily
+        base: 'g',
         options: {
             'mg': { name: 'Milligrams', toBase: 0.001 },
             'g': { name: 'Grams', toBase: 1 },
@@ -43,7 +48,6 @@ const units = {
         defaultTo: 'gal'
     },
     temperature: {
-        // Temperature requires custom formulas, so we handle it differently
         options: {
             'c': { name: 'Celsius' },
             'f': { name: 'Fahrenheit' },
@@ -89,18 +93,15 @@ const modalResult = document.getElementById('modal-result');
 let currentCategory = 'weight';
 let conversionHistory = [];
 
-// Initialize App
 function init() {
     setupCategoryListeners();
     setupInputListeners();
     setupUIListeners();
     loadHistory();
 
-    // Resume previous category if available
     const savedCategory = localStorage.getItem('mc_last_category');
     if (savedCategory && units[savedCategory]) {
         currentCategory = savedCategory;
-        // Update active button
         categoryBtns.forEach(b => {
             if (b.dataset.category === currentCategory) {
                 b.classList.add('active');
@@ -110,33 +111,36 @@ function init() {
         });
     }
 
-    populateSelects(currentCategory);
+    populateSelects(currentCategory, true);
 }
 
-// Set up category buttons
 function setupCategoryListeners() {
     categoryBtns.forEach(btn => {
         btn.addEventListener('click', (e) => {
-            // Remove active class from all
+            const targetBtn = e.target.closest('.category-btn');
+            if (!targetBtn) return;
+
             categoryBtns.forEach(b => b.classList.remove('active'));
-            // Add active class to clicked
-            e.target.classList.add('active');
-            
-            // Update category
-            currentCategory = e.target.dataset.category;
+            targetBtn.classList.add('active');
+
+            currentCategory = targetBtn.dataset.category;
             localStorage.setItem('mc_last_category', currentCategory);
-            populateSelects(currentCategory);
+
+            populateSelects(currentCategory, true);
         });
     });
 }
 
-// Populate select dropdowns based on category
-function populateSelects(category) {
+function populateSelects(category, isInitialOrNewCategory = false) {
+    const fromValBefore = fromSelect.value;
+    const toValBefore = toSelect.value;
+
     fromSelect.innerHTML = '';
     toSelect.innerHTML = '';
 
     const catData = units[category];
-    
+    if (!catData) return;
+
     for (const [key, val] of Object.entries(catData.options)) {
         const option1 = document.createElement('option');
         option1.value = key;
@@ -149,60 +153,62 @@ function populateSelects(category) {
         toSelect.appendChild(option2);
     }
 
-    // Set defaults or load from storage
-    const savedFrom = localStorage.getItem(`mc_last_from_${category}`);
-    const savedTo = localStorage.getItem(`mc_last_to_${category}`);
+    if (isInitialOrNewCategory) {
+        const savedFrom = localStorage.getItem(`mc_last_from_${category}`);
+        const savedTo = localStorage.getItem(`mc_last_to_${category}`);
 
-    if (savedFrom && catData.options[savedFrom]) {
-        fromSelect.value = savedFrom;
+        fromSelect.value = (savedFrom && catData.options[savedFrom]) ? savedFrom : catData.defaultFrom;
+        toSelect.value = (savedTo && catData.options[savedTo]) ? savedTo : catData.defaultTo;
     } else {
-        fromSelect.value = catData.defaultFrom;
+        if (fromValBefore) fromSelect.value = fromValBefore;
+        if (toValBefore) toSelect.value = toValBefore;
     }
 
-    if (savedTo && catData.options[savedTo]) {
-        toSelect.value = savedTo;
-    } else {
-        toSelect.value = catData.defaultTo;
-    }
+    const currentFrom = fromSelect.value;
+    const currentTo = toSelect.value;
 
-    // Trigger conversion
+    Array.from(toSelect.options).forEach(opt => {
+        opt.disabled = (opt.value === currentFrom);
+    });
+
+    Array.from(fromSelect.options).forEach(opt => {
+        opt.disabled = (opt.value === currentTo);
+    });
+
     convert();
 }
 
-// Set up input and select listeners
 function setupInputListeners() {
     fromInput.addEventListener('input', convert);
+
     fromSelect.addEventListener('change', () => {
         localStorage.setItem(`mc_last_from_${currentCategory}`, fromSelect.value);
-        convert();
+        populateSelects(currentCategory, false);
     });
+
     toSelect.addEventListener('change', () => {
         localStorage.setItem(`mc_last_to_${currentCategory}`, toSelect.value);
-        convert();
+        populateSelects(currentCategory, false);
     });
 
     swapBtn.addEventListener('click', () => {
-        // Swap selected units
         const tempUnit = fromSelect.value;
         fromSelect.value = toSelect.value;
         toSelect.value = tempUnit;
-        
+
         localStorage.setItem(`mc_last_from_${currentCategory}`, fromSelect.value);
         localStorage.setItem(`mc_last_to_${currentCategory}`, toSelect.value);
-        
-        // Add a subtle animation to the button
+
         swapBtn.style.transform = 'rotate(180deg) scale(0.92)';
         setTimeout(() => {
             swapBtn.style.transform = '';
         }, 150);
 
-        convert();
+        populateSelects(currentCategory, false);
     });
 }
 
-// UI listeners for copy, modal, and history clicks
 function setupUIListeners() {
-    // Copy button
     copyBtn.addEventListener('click', () => {
         if (!toInput.value) return;
         navigator.clipboard.writeText(toInput.value).then(() => {
@@ -216,30 +222,25 @@ function setupUIListeners() {
         });
     });
 
-    // History item click delegation
     historyList.addEventListener('click', (e) => {
         const item = e.target.closest('.history-item');
         if (!item) return;
-        
-        // Re-run the specific conversion clicked
+
         const cat = item.dataset.cat;
-        
-        // Switch category if needed
+
         if (currentCategory !== cat) {
             document.querySelector(`[data-category="${cat}"]`).click();
         }
-        
-        // Set values and convert
+
         fromSelect.value = item.dataset.fromUnit;
         toSelect.value = item.dataset.toUnit;
         fromInput.value = item.dataset.fromVal;
-        convert();
-        
-        // Ensure UI represents new values
+
+        populateSelects(currentCategory, false);
+
         fromInput.focus();
     });
 
-    // Cmd+K Modal toggle
     document.addEventListener('keydown', (e) => {
         if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
             e.preventDefault();
@@ -249,13 +250,11 @@ function setupUIListeners() {
             toggleModal();
         }
     });
-    
-    // Close modal on outside click
+
     cmdKOverlay.addEventListener('click', (e) => {
         if (e.target === cmdKOverlay) toggleModal();
     });
 
-    // Process natural language in modal
     cmdKInput.addEventListener('input', processNaturalLanguage);
 }
 
@@ -268,11 +267,10 @@ function toggleModal() {
         cmdKOverlay.classList.add('active');
         cmdKInput.value = '';
         modalResult.textContent = 'Start typing to instantly convert...';
-        setTimeout(() => cmdKInput.focus(), 50); // wait for display
+        setTimeout(() => cmdKInput.focus(), 50);
     }
 }
 
-// Convert natural language string "5 kg in lb"
 function processNaturalLanguage(e) {
     const query = e.target.value.toLowerCase().trim();
     if (!query) {
@@ -280,8 +278,6 @@ function processNaturalLanguage(e) {
         return;
     }
 
-    // Basic regex: (number) (unit) (to/in/into/=>) (unit)
-    // E.g. "5 kg to lb" => match[1]=5, match[2]=kg, match[4]=lb
     const regex = /^([\d.]+)\s*([a-z_]+)\s+(to|in|into|=>|-|>)\s+([a-z_]+)$/i;
     const match = query.match(regex);
 
@@ -296,12 +292,10 @@ function processNaturalLanguage(e) {
 
     if (isNaN(val)) return;
 
-    // Search for units across all categories to build a flat map
     let foundCategory = null;
     let validFrom = null;
     let validTo = null;
 
-    // First find the category the "from" unit belongs to
     for (const [catName, catData] of Object.entries(units)) {
         if (catData.options[fromStr]) {
             foundCategory = catName;
@@ -315,7 +309,6 @@ function processNaturalLanguage(e) {
         return;
     }
 
-    // Ensure the "to" unit exists IN THE SAME CATEGORY
     if (units[foundCategory].options[toStr]) {
         validTo = toStr;
     } else {
@@ -323,7 +316,11 @@ function processNaturalLanguage(e) {
         return;
     }
 
-    // Perform calculation
+    if (validFrom === validTo) {
+        modalResult.textContent = 'Cannot convert a unit to itself.';
+        return;
+    }
+
     let ans = 0;
     if (foundCategory === 'temperature') {
         ans = convertTemperature(val, validFrom, validTo);
@@ -338,25 +335,21 @@ function processNaturalLanguage(e) {
     modalResult.textContent = `${val} ${validFrom} = ${ans} ${validTo}`;
 }
 
-// Handle temperature conversion
 function convertTemperature(value, from, to) {
     let celsius;
 
-    // First convert to Celsius
     if (from === 'c') celsius = value;
-    else if (from === 'f') celsius = (value - 32) * 5/9;
+    else if (from === 'f') celsius = (value - 32) * 5 / 9;
     else if (from === 'k') celsius = value - 273.15;
 
-    // Then convert Celsius to target
     if (to === 'c') return celsius;
-    if (to === 'f') return (celsius * 9/5) + 32;
+    if (to === 'f') return (celsius * 9 / 5) + 32;
     if (to === 'k') return celsius + 273.15;
 }
 
-// Main conversion logic
 function convert() {
     const fromVal = parseFloat(fromInput.value);
-    
+
     if (isNaN(fromVal)) {
         toInput.value = '';
         formulaDisplay.textContent = '';
@@ -367,32 +360,32 @@ function convert() {
     const toUnit = toSelect.value;
     let result = 0;
 
+    if (fromUnit === toUnit) {
+        toInput.value = fromVal;
+        updateFormulaDisplay(fromUnit, toUnit);
+        return;
+    }
+
     if (currentCategory === 'temperature') {
         result = convertTemperature(fromVal, fromUnit, toUnit);
     } else {
-        // Standard ratio conversion using chosen base unit
         const fromBaseRatio = units[currentCategory].options[fromUnit].toBase;
         const toBaseRatio = units[currentCategory].options[toUnit].toBase;
-        
-        // Convert input to base unit, then to target unit
+
         const valueInBase = fromVal * fromBaseRatio;
         result = valueInBase / toBaseRatio;
     }
 
-    // Format output (handle floating point precision issues)
-    // Show up to 2 decimal places
     toInput.value = parseFloat(result.toFixed(2));
     updateFormulaDisplay(fromUnit, toUnit);
     saveHistory(fromVal, fromUnit, parseFloat(result.toFixed(2)), toUnit, currentCategory);
 }
 
-// History Management
 function saveHistory(fVal, fUnit, tVal, tUnit, cat) {
-    if (isNaN(fVal) || isNaN(tVal)) return;
+    if (isNaN(fVal) || isNaN(tVal) || fUnit === tUnit) return;
 
     const entry = { fVal, fUnit, tVal, tUnit, cat, id: Date.now() };
 
-    // Prevent immediate duplicate of exactly the same conversion
     if (conversionHistory.length > 0) {
         const last = conversionHistory[0];
         if (last.fVal === fVal && last.fUnit === fUnit && last.tUnit === tUnit) {
@@ -401,8 +394,7 @@ function saveHistory(fVal, fUnit, tVal, tUnit, cat) {
     }
 
     conversionHistory.unshift(entry);
-    
-    // Keep only last 5
+
     if (conversionHistory.length > 5) {
         conversionHistory.pop();
     }
@@ -416,7 +408,7 @@ function loadHistory() {
     if (saved) {
         try {
             conversionHistory = JSON.parse(saved);
-        } catch(e) {
+        } catch (e) {
             conversionHistory = [];
         }
     }
@@ -425,12 +417,12 @@ function loadHistory() {
 
 function renderHistory() {
     historyList.innerHTML = '';
-    
+
     if (conversionHistory.length === 0) {
         historyPanel.style.display = 'none';
         return;
     }
-    
+
     historyPanel.style.display = 'block';
 
     conversionHistory.forEach(item => {
@@ -441,17 +433,15 @@ function renderHistory() {
         div.dataset.toUnit = item.tUnit;
         div.dataset.fromVal = item.fVal;
 
-        // E.g. 1 kg → 2.2 lb
         div.innerHTML = `
             <span><strong>${item.fVal}</strong> ${item.fUnit}</span>
-            <span style="color: var(--text-muted); font-size: 0.8em;">→</span>
+            <span style="color: var(--text-muted); font-size: 0.8em; margin: 0 4px;">→</span>
             <span><strong>${item.tVal}</strong> ${item.tUnit}</span>
         `;
         historyList.appendChild(div);
     });
 }
 
-// Update the formula text at the bottom
 function updateFormulaDisplay(fromUnit, toUnit) {
     if (fromUnit === toUnit) {
         formulaDisplay.textContent = 'Units are identical';
@@ -466,9 +456,8 @@ function updateFormulaDisplay(fromUnit, toUnit) {
         const toBaseRatio = units[currentCategory].options[toUnit].toBase;
         formulaVal = parseFloat((fromBaseRatio / toBaseRatio).toFixed(2));
     }
-    
+
     formulaDisplay.textContent = `1 ${fromUnit} ≈ ${formulaVal} ${toUnit}`;
 }
 
-// Run init on load
-document.addEventListener('DOMContentLoaded', init);
+document.addEventListener('DOMContentLoaded', init); s
