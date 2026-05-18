@@ -577,3 +577,9 @@ body::before {
   gap: 12px !important;
   padding: 8px 4px !important;
 }
+.app-footer {
+    text-align: center;
+    padding: 16px;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
