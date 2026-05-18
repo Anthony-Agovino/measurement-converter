@@ -460,4 +460,8 @@ function updateFormulaDisplay(fromUnit, toUnit) {
     formulaDisplay.textContent = `1 ${fromUnit} ≈ ${formulaVal} ${toUnit}`;
 }
 
-document.addEventListener('DOMContentLoaded', init); s
+document.addEventListener('DOMContentLoaded', init);
+const lastUpdatedEl = document.getElementById("last-updated");
+if (lastUpdatedEl && typeof __BUILD_TIMESTAMP__ !== "undefined") {
+    lastUpdatedEl.textContent = `Last updated: ${__BUILD_TIMESTAMP__}`;
+}

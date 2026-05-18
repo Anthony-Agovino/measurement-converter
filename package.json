@@ -1,0 +1,25 @@
+{
+  "name": "app",
+  "version": "1.0.0",
+  "description": "",
+  "main": "script.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Anthony-Agovino/measurement-converter.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Anthony-Agovino/measurement-converter/issues"
+  },
+  "homepage": "https://github.com/Anthony-Agovino/measurement-converter#readme",
+  "devDependencies": {
+    "vite": "^8.0.13",
+    "vite-plugin-pwa": "^1.3.0"
+  }
+}
